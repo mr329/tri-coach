@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tri Coach — Mehdi's Training Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;500;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root {
+  --bg: #0e0f11;
+  --surface: #161719;
+  --surface2: #1e2024;
+  --surface3: #26292f;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.13);
+  --text: #f0f0ee;
+  --text2: #8a8d94;
+  --text3: #4a4d54;
+  --run: #4ade80;
+  --swim: #38bdf8;
+  --ride: #fb923c;
+  --ultra: #f472b6;
+  --accent: #a78bfa;
+  --red: #f87171;
+  --amber: #fbbf24;
+  --green: #4ade80;
+  --r: 10px;
+  --r-lg: 16px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  line-height: 1.6;
+}
+h1,h2,h3,.mono { font-family: 'Syne', sans-serif; }
+.mono-text { font-family: 'DM Mono', monospace; }
+
+/* Layout */
+.shell { display: flex; min-height: 100vh; }
+.sidebar {
+  width: 220px;
+  flex-shrink: 0;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  z-index: 100;
+}
+.sidebar-logo {
+  padding: 1.5rem 1.5rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+.logo-mark {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 20px;
+  letter-spacing: -0.5px;
+  color: var(--text);
+}
+.logo-sub {
+  font-size: 11px;
+  color: var(--text2);
+  margin-top: 2px;
+  font-family: 'DM Mono', monospace;
+  letter-spacing: 0.05em;
+}
+.nav-group { padding: 1rem 0.75rem; flex: 1; }
+.nav-label {
+  font-size: 10px;
+  font-family: 'DM Mono', monospace;
+  letter-spacing: 0.1em;
+  color: var(--text3);
+  padding: 0 0.75rem;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: var(--r);
+  cursor: pointer;
+  color: var(--text2);
+  font-size: 13.5px;
+  font-weight: 400;
+  transition: all 0.15s;
+  margin-bottom: 2px;
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+}
+.nav-item:hover { background: var(--surface2); color: var(--text); }
+.nav-item.active { background: var(--surface3); color: var(--text); font-weight: 500; }
+.nav-item .icon { width: 16px; height: 16px; opacity: 0.6; flex-shrink: 0; }
+.nav-item.active .icon { opacity: 1; }
+.nav-divider { height: 1px; background: var(--border); margin: 10px 12px; }
+.sidebar-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--text3);
+  font-family: 'DM Mono', monospace;
+}
+
+.main {
+  margin-left: 220px;
+  flex: 1;
+  min-height: 100vh;
+  padding: 2rem 2.5rem;
+  max-width: calc(100vw - 220px);
+}
+.page { display: none; }
+.page.active { display: block; }
+.page-header { margin-bottom: 2rem; }
+.page-title {
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+  font-size: 26px;
+  letter-spacing: -0.5px;
+  color: var(--text);
+}
+.page-sub { font-size: 13px; color: var(--text2); margin-top: 4px; }
+
+/* Cards */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1rem;
+}
+.card-title {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text3);
+  margin-bottom: 1.25rem;
+}
+
+/* Metrics grid */
+.metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 1.5rem; }
+.metric-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 1.1rem 1.25rem;
+  position: relative;
+  overflow: hidden;
+}
+.metric-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+}
+.metric-card.run::before { background: var(--run); }
+.metric-card.swim::before { background: var(--swim); }
+.metric-card.ride::before { background: var(--ride); }
+.metric-card.next::before { background: var(--accent); }
+.metric-label { font-size: 11px; color: var(--text2); margin-bottom: 6px; font-family: 'DM Mono', monospace; }
+.metric-value { font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 700; color: var(--text); letter-spacing: -1px; }
+.metric-sub { font-size: 11px; color: var(--text3); margin-top: 4px; }
+
+/* Legend */
+.legend { display: flex; gap: 16px; margin-bottom: 12px; flex-wrap: wrap; }
+.leg { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text2); }
+.leg-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+
+/* Race cards */
+.race-grid { display: grid; gap: 10px; }
+.race-item {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 1rem 1.25rem;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 1rem;
+  align-items: start;
+  transition: border-color 0.15s;
+}
+.race-item:hover { border-color: var(--border2); }
+.race-name { font-family: 'Syne', sans-serif; font-weight: 600; font-size: 15px; color: var(--text); }
+.race-meta { font-size: 12px; color: var(--text2); margin-top: 3px; }
+.race-badge {
+  font-size: 10px;
+  font-family: 'DM Mono', monospace;
+  padding: 3px 9px;
+  border-radius: 20px;
+  display: inline-block;
+  margin-top: 7px;
+  letter-spacing: 0.05em;
+}
+.b-tri { background: rgba(56,189,248,0.15); color: #38bdf8; border: 1px solid rgba(56,189,248,0.2); }
+.b-run { background: rgba(74,222,128,0.15); color: #4ade80; border: 1px solid rgba(74,222,128,0.2); }
+.b-ultra { background: rgba(244,114,182,0.15); color: #f472b6; border: 1px solid rgba(244,114,182,0.2); }
+.b-full { background: rgba(167,139,250,0.15); color: #a78bfa; border: 1px solid rgba(167,139,250,0.2); }
+.countdown-big { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 32px; color: var(--text); text-align: right; letter-spacing: -1px; }
+.countdown-label { font-size: 10px; color: var(--text3); text-align: right; font-family: 'DM Mono', monospace; }
+
+/* Forms */
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+.form-row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+.form-row1 { margin-bottom: 12px; }
+.field label { font-size: 11px; color: var(--text2); display: block; margin-bottom: 6px; font-family: 'DM Mono', monospace; letter-spacing: 0.04em; }
+.field input, .field select, .field textarea {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: var(--r);
+  padding: 9px 12px;
+  font-size: 13px;
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  transition: border-color 0.15s;
+  outline: none;
+  appearance: none;
+}
+.field input:focus, .field select:focus, .field textarea:focus {
+  border-color: var(--accent);
+}
+.field select { cursor: pointer; }
+.field textarea { resize: vertical; min-height: 72px; }
+option { background: #1e2024; }
+
+/* Buttons */
+.btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+.btn {
+  font-size: 12.5px;
+  padding: 8px 16px;
+  border-radius: var(--r);
+  cursor: pointer;
+  border: 1px solid var(--border2);
+  background: transparent;
+  color: var(--text2);
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 500;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.btn:hover { background: var(--surface2); color: var(--text); }
+.btn-primary { background: var(--accent); color: #0e0f11; border-color: var(--accent); }
+.btn-primary:hover { background: #c4b5fd; border-color: #c4b5fd; }
+.btn-green { background: var(--run); color: #0e0f11; border-color: var(--run); }
+.btn-green:hover { background: #86efac; border-color: #86efac; }
+.btn-blue { background: var(--swim); color: #0e0f11; border-color: var(--swim); }
+.btn-blue:hover { background: #7dd3fc; }
+.btn-danger { color: var(--red); border-color: rgba(248,113,113,0.2); }
+.btn-danger:hover { background: rgba(248,113,113,0.1); }
+.btn-sm { font-size: 11px; padding: 5px 11px; }
+
+/* Plan table */
+.plan-table-wrap { overflow-x: auto; }
+.plan-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.plan-table th { text-align: left; padding: 8px 10px; color: var(--text3); font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.06em; font-weight: 400; border-bottom: 1px solid var(--border); }
+.plan-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); color: var(--text); }
+.plan-table tr:hover td { background: var(--surface2); }
+.phase-tag { font-size: 10px; font-family: 'DM Mono', monospace; padding: 2px 8px; border-radius: 20px; letter-spacing: 0.04em; }
+.ph-base { background: rgba(56,189,248,0.12); color: #38bdf8; }
+.ph-build { background: rgba(251,146,60,0.12); color: #fb923c; }
+.ph-peak { background: rgba(167,139,250,0.15); color: #a78bfa; }
+.ph-taper { background: rgba(74,222,128,0.12); color: #4ade80; }
+.ph-race { background: rgba(248,113,113,0.15); color: #f87171; }
+.ph-recovery { background: rgba(255,255,255,0.06); color: var(--text2); }
+
+/* Day schedule */
+.week-sched { display: grid; grid-template-columns: 80px repeat(7,1fr); gap: 4px; margin-bottom: 4px; align-items: stretch; }
+.day-hdr { font-size: 10px; color: var(--text3); text-align: center; padding: 4px 2px; font-family: 'DM Mono', monospace; }
+.wk-lbl { font-size: 11px; color: var(--text2); font-weight: 500; padding-top: 6px; }
+.day-cell { border-radius: 6px; padding: 5px 6px; font-size: 10px; min-height: 40px; line-height: 1.4; }
+.dc-rest { background: var(--surface2); color: var(--text3); }
+.dc-run { background: rgba(74,222,128,0.1); color: #4ade80; border: 1px solid rgba(74,222,128,0.15); }
+.dc-swim { background: rgba(56,189,248,0.1); color: #38bdf8; border: 1px solid rgba(56,189,248,0.15); }
+.dc-ride { background: rgba(251,146,60,0.1); color: #fb923c; border: 1px solid rgba(251,146,60,0.15); }
+.dc-brick { background: rgba(167,139,250,0.1); color: #a78bfa; border: 1px solid rgba(167,139,250,0.15); }
+.dc-race { background: rgba(248,113,113,0.15); color: #f87171; border: 1px solid rgba(248,113,113,0.2); font-weight: 600; }
+.dc-ultra { background: rgba(244,114,182,0.1); color: #f472b6; border: 1px solid rgba(244,114,182,0.15); }
+
+/* Progress */
+.prog-row { display: grid; grid-template-columns: 90px 1fr 55px 80px; gap: 10px; align-items: center; margin-bottom: 12px; }
+.prog-track { background: var(--surface2); border-radius: 4px; height: 8px; overflow: hidden; }
+.prog-bar { height: 100%; border-radius: 4px; transition: width 0.5s; }
+.status-pill { font-size: 10px; font-family: 'DM Mono', monospace; padding: 2px 8px; border-radius: 20px; }
+.sp-green { background: rgba(74,222,128,0.12); color: #4ade80; }
+.sp-amber { background: rgba(251,191,36,0.12); color: #fbbf24; }
+.sp-red { background: rgba(248,113,113,0.12); color: #f87171; }
+
+/* Alert */
+.alert { padding: 10px 14px; border-radius: var(--r); font-size: 13px; margin-bottom: 1rem; border-left: 3px solid; }
+.alert-ok { background: rgba(74,222,128,0.07); border-color: var(--green); color: #86efac; }
+.alert-warn { background: rgba(251,191,36,0.07); border-color: var(--amber); color: #fde68a; }
+.alert-info { background: rgba(167,139,250,0.07); border-color: var(--accent); color: #c4b5fd; }
+
+/* Upload zone */
+.upload-zone {
+  border: 1px dashed var(--border2);
+  border-radius: var(--r-lg);
+  padding: 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.15s;
+  margin-bottom: 1rem;
+}
+.upload-zone:hover { background: var(--surface2); border-color: var(--accent); }
+
+/* Deploy cards */
+.deploy-option {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 1.1rem 1.25rem;
+  margin-bottom: 10px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 1rem;
+  align-items: center;
+}
+.deploy-name { font-weight: 600; font-size: 14px; color: var(--text); font-family: 'Syne', sans-serif; }
+.deploy-desc { font-size: 12px; color: var(--text2); margin-top: 4px; line-height: 1.5; }
+.deploy-tag { font-size: 10px; font-family: 'DM Mono', monospace; color: var(--text3); margin-top: 6px; }
+
+/* Divider */
+.divider { height: 1px; background: var(--border); margin: 1.5rem 0; }
+
+/* Logged weeks table */
+.log-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.log-table th { text-align: left; padding: 6px 10px; color: var(--text3); font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.06em; font-weight: 400; border-bottom: 1px solid var(--border); }
+.log-table td { padding: 7px 10px; border-bottom: 1px solid var(--border); color: var(--text); }
+.log-table tr:hover td { background: var(--surface2); }
+
+/* Responsive */
+@media (max-width: 900px) {
+  .sidebar { width: 180px; }
+  .main { margin-left: 180px; padding: 1.5rem; max-width: calc(100vw - 180px); }
+  .metrics { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 640px) {
+  .sidebar { display: none; }
+  .main { margin-left: 0; max-width: 100vw; padding: 1rem; }
+  .metrics { grid-template-columns: repeat(2,1fr); }
+  .form-row, .form-row3 { grid-template-columns: 1fr; }
+  .week-sched { grid-template-columns: 60px repeat(7,1fr); }
+}
+</style>
+</head>
+<body>
+<div class="shell">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">TriCoach</div>
+      <div class="logo-sub">MEHDI · 2026</div>
+    </div>
+    <nav class="nav-group">
+      <div class="nav-label">Overview</div>
+      <button class="nav-item active" onclick="nav('dashboard',this)">
+        <svg class="icon" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
+        Dashboard
+      </button>
+      <div class="nav-divider"></div>
+      <div class="nav-label">Training</div>
+      <button class="nav-item" onclick="nav('races',this)">
+        <svg class="icon" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l1.8 3.6L14 5.4l-3 2.9.7 4.1L8 10.4l-3.7 2 .7-4.1-3-2.9 4.2-.8z"/></svg>
+        Races
+      </button>
+      <button class="nav-item" onclick="nav('plan',this)">
+        <svg class="icon" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="3" width="14" height="2" rx="1"/><rect x="1" y="7" width="10" height="2" rx="1"/><rect x="1" y="11" width="12" height="2" rx="1"/></svg>
+        Training plan
+      </button>
+      <button class="nav-item" onclick="nav('progress',this)">
+        <svg class="icon" viewBox="0 0 16 16" fill="currentColor"><path d="M1 13L5 7l3 3 3-5 3 4"/></svg>
+        Progress
+      </button>
+      <button class="nav-item" onclick="nav('log',this)">
+        <svg class="icon" viewBox="0 0 16 16" fill="currentColor"><rect x="2" y="1" width="12" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M5 5h6M5 8h6M5 11h4"/></svg>
+        Log week
+      </button>
+      <div class="nav-divider"></div>
+      <div class="nav-label">Setup</div>
+      <button class="nav-item" onclick="nav('deploy',this)">
+        <svg class="icon" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1v10M4 7l4 4 4-4M2 13h12" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
+        Deploy
+      </button>
+    </nav>
+    <div class="sidebar-footer">v2.0 · Built with Claude</div>
+  </aside>
+
+  <!-- Main content -->
+  <main class="main">
+
+    <!-- DASHBOARD -->
+    <div id="page-dashboard" class="page active">
+      <div class="page-header">
+        <div class="page-title">Dashboard</div>
+        <div class="page-sub">Your training at a glance — last 12 months from Strava</div>
+      </div>
+      <div class="metrics">
+        <div class="metric-card run">
+          <div class="metric-label">Run — 12 months</div>
+          <div class="metric-value" id="dash-run-total">—</div>
+          <div class="metric-sub">peak: 210km · Sep '25</div>
+        </div>
+        <div class="metric-card swim">
+          <div class="metric-label">Swim — 12 months</div>
+          <div class="metric-value" id="dash-swim-total">—</div>
+          <div class="metric-sub">returning after knee layoff</div>
+        </div>
+        <div class="metric-card ride">
+          <div class="metric-label">Ride — 12 months</div>
+          <div class="metric-value" id="dash-ride-total">—</div>
+          <div class="metric-sub">inc. daily Surry Hills commute</div>
+        </div>
+        <div class="metric-card next">
+          <div class="metric-label">Next race</div>
+          <div class="metric-value" id="dash-next-days">—</div>
+          <div class="metric-sub" id="dash-next-name">Add a race</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Monthly volume — last 12 months</div>
+        <div class="legend">
+          <div class="leg"><div class="leg-dot" style="background:var(--run)"></div>Run (km)</div>
+          <div class="leg"><div class="leg-dot" style="background:var(--swim)"></div>Swim (×100m shown)</div>
+          <div class="leg"><div class="leg-dot" style="background:var(--ride)"></div>Ride (km)</div>
+        </div>
+        <div style="position:relative;height:220px">
+          <canvas id="volChart" role="img" aria-label="Monthly training volume for swim bike and run">Volume data.</canvas>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Upcoming races</div>
+        <div class="race-grid" id="dash-races"></div>
+      </div>
+    </div>
+
+    <!-- RACES -->
+    <div id="page-races" class="page">
+      <div class="page-header">
+        <div class="page-title">Races</div>
+        <div class="page-sub">Add and manage your race calendar — multiple A/B/C races supported</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Add a race</div>
+        <div class="form-row">
+          <div class="field"><label>Race name</label><input id="rn" placeholder="e.g. Bondi to Manly Ultra 2026"></div>
+          <div class="field"><label>Date</label><input type="date" id="rd"></div>
+        </div>
+        <div class="form-row">
+          <div class="field"><label>Race type</label>
+            <select id="rt" onchange="toggleTimeRow()">
+              <option value="sprint">Sprint triathlon</option>
+              <option value="olympic">Olympic triathlon</option>
+              <option value="70.3">70.3 / Half iron</option>
+              <option value="full">Full Ironman</option>
+              <option value="marathon">Marathon</option>
+              <option value="half-marathon">Half marathon</option>
+              <option value="bondi-manly">Bondi to Manly (30km ultra)</option>
+              <option value="ultra-50">Ultra 50km</option>
+              <option value="ultra-100">Ultra 100km</option>
+              <option value="custom-ultra">Custom ultra</option>
+              <option value="run">Running race (other)</option>
+            </select>
+          </div>
+          <div class="field"><label>Goal</label>
+            <select id="rg" onchange="toggleTimeRow()">
+              <option value="finish">Finish / complete</option>
+              <option value="time">Target finish time</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row" id="r-time-row" style="display:none">
+          <div class="field"><label>Target time (hh:mm:ss)</label><input id="rtm" placeholder="e.g. 5:30:00"></div>
+          <div class="field"><label>Priority</label>
+            <select id="rp">
+              <option value="A">A race — peak for this</option>
+              <option value="B">B race — solid effort</option>
+              <option value="C">C race — training race</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row1 field"><label>Notes</label><textarea id="rnotes" placeholder="Course, travel, injury considerations..."></textarea></div>
+        <div class="btn-row"><button class="btn btn-primary" onclick="addRace()">Add race</button></div>
+      </div>
+      <div id="race-list"></div>
+    </div>
+
+    <!-- PLAN -->
+    <div id="page-plan" class="page">
+      <div class="page-header">
+        <div class="page-title">Training plan</div>
+        <div class="page-sub">Generate a periodised swim / bike / run plan tailored to your target race</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Plan settings</div>
+        <div class="form-row">
+          <div class="field"><label>Target race</label>
+            <select id="pr" onchange="autoWeeks()"><option value="">— select a race —</option></select>
+          </div>
+          <div class="field"><label>Weeks available</label><input type="number" id="pw" value="18" min="4" max="52"></div>
+        </div>
+        <div class="form-row">
+          <div class="field"><label>Run fitness</label>
+            <select id="prf">
+              <option value="1">Base — up to 10km/wk</option>
+              <option value="2" selected>Moderate — 10–30km/wk</option>
+              <option value="3">Solid — 30–60km/wk</option>
+              <option value="4">High — 60km+/wk</option>
+            </select>
+          </div>
+          <div class="field"><label>Swim fitness</label>
+            <select id="psf">
+              <option value="1">Base — up to 1km</option>
+              <option value="2" selected>Moderate — 1–2km sessions</option>
+              <option value="3">Solid — 2–3km sessions</option>
+              <option value="4">High — 3km+</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="field"><label>Bike fitness</label>
+            <select id="pbf">
+              <option value="1">Base</option>
+              <option value="2">Moderate</option>
+              <option value="3" selected>Solid — commuting daily</option>
+              <option value="4">High</option>
+            </select>
+          </div>
+          <div class="field"><label>Sessions per week</label>
+            <select id="pss">
+              <option value="5">5</option>
+              <option value="6" selected>6</option>
+              <option value="7">7</option>
+              <option value="8">8</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row1 field">
+          <label>Health / injury notes</label>
+          <input id="pinj" value="Right knee — lateral meniscus tear. Conservative run load. No sudden volume spikes.">
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="genPlan()">Generate plan</button>
+          <button class="btn" onclick="exportPDF()">Export PDF</button>
+        </div>
+      </div>
+      <div id="plan-out"></div>
+    </div>
+
+    <!-- PROGRESS -->
+    <div id="page-progress" class="page">
+      <div class="page-header">
+        <div class="page-title">Progress</div>
+        <div class="page-sub">Volume compliance and performance vs your training plan</div>
+      </div>
+      <div id="progress-content"></div>
+    </div>
+
+    <!-- LOG -->
+    <div id="page-log" class="page">
+      <div class="page-header">
+        <div class="page-title">Log week</div>
+        <div class="page-sub">Record your weekly training — or upload a fresh Strava CSV</div>
+      </div>
+      <div class="card">
+        <div class="card-title">This week's training</div>
+        <div class="form-row">
+          <div class="field"><label>Week starting (Monday)</label><input type="date" id="lw"></div>
+          <div class="field"><label>Overall feel</label>
+            <select id="lrpe">
+              <option value="easy">Easy — felt fresh all week</option>
+              <option value="moderate" selected>Moderate — solid work</option>
+              <option value="hard">Hard — pushed it</option>
+              <option value="very-hard">Very hard — cooked</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row3">
+          <div class="field"><label>Run total (km)</label><input type="number" id="lr" placeholder="0" step="0.1"></div>
+          <div class="field"><label>Run sessions</label><input type="number" id="lrs" placeholder="0" min="0" max="7"></div>
+          <div class="field"><label>Longest run (km)</label><input type="number" id="lrl" placeholder="0" step="0.1"></div>
+        </div>
+        <div class="form-row3">
+          <div class="field"><label>Swim total (m)</label><input type="number" id="ls" placeholder="0" step="50"></div>
+          <div class="field"><label>Swim sessions</label><input type="number" id="lss" placeholder="0" min="0" max="7"></div>
+          <div class="field"><label>Longest swim (m)</label><input type="number" id="lsl" placeholder="0" step="50"></div>
+        </div>
+        <div class="form-row3">
+          <div class="field"><label>Ride total (km)</label><input type="number" id="lb" placeholder="0" step="0.1"></div>
+          <div class="field"><label>Ride sessions</label><input type="number" id="lbs" placeholder="0" min="0" max="7"></div>
+          <div class="field"><label>Longest ride (km)</label><input type="number" id="lbl" placeholder="0" step="0.1"></div>
+        </div>
+        <div class="form-row1 field"><label>Notes</label><textarea id="lnotes" placeholder="e.g. Knee felt good on Tuesday. Swim strong. Skipped Friday ride due to rain."></textarea></div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="logWeek()">Save week</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Upload Strava CSV</div>
+        <div class="upload-zone" onclick="document.getElementById('csvup').click()">
+          <div style="font-size:14px;color:var(--text2)">Click to upload activities.csv</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:4px">From your Strava export zip — merges with existing data</div>
+        </div>
+        <input type="file" id="csvup" accept=".csv" style="display:none" onchange="handleCSV(event)">
+        <div id="csv-fb"></div>
+      </div>
+      <div class="card" id="log-history-card">
+        <div class="card-title">Logged weeks</div>
+        <div id="log-history"></div>
+      </div>
+    </div>
+
+    <!-- DEPLOY -->
+    <div id="page-deploy" class="page">
+      <div class="page-header">
+        <div class="page-title">Deploy</div>
+        <div class="page-sub">Host this dashboard so you can access it from any device</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Hosting options</div>
+        <div class="deploy-option">
+          <div>
+            <div class="deploy-name">Netlify Drop — recommended</div>
+            <div class="deploy-desc">Drag and drop this HTML file to netlify.com/drop. Live URL in under 60 seconds. No account needed to start.</div>
+            <div class="deploy-tag">Free · 2 min setup · yourapp.netlify.app</div>
+          </div>
+          <a href="https://app.netlify.com/drop" target="_blank" class="btn btn-primary btn-sm">Open Netlify ↗</a>
+        </div>
+        <div class="deploy-option">
+          <div>
+            <div class="deploy-name">GitHub Pages</div>
+            <div class="deploy-desc">Create a repo, add this file as index.html, enable Pages in Settings. Version-controlled and free.</div>
+            <div class="deploy-tag">Free · 10 min setup · yourusername.github.io/tri-coach</div>
+          </div>
+          <a href="https://github.com/new" target="_blank" class="btn btn-sm">New repo ↗</a>
+        </div>
+        <div class="deploy-option">
+          <div>
+            <div class="deploy-name">Vercel + Supabase</div>
+            <div class="deploy-desc">Add a real database for cross-device sync. Your data follows you from laptop to phone. Overkill for now but ready when you want it.</div>
+            <div class="deploy-tag">Free tier · 20 min setup · true cross-device sync</div>
+          </div>
+          <a href="https://vercel.com" target="_blank" class="btn btn-sm">Vercel ↗</a>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Data & storage</div>
+        <div style="font-size:13px;color:var(--text2);line-height:1.7">
+          Your races, training plan, and weekly logs are stored in this browser's <code style="font-family:'DM Mono',monospace;font-size:12px;background:var(--surface2);padding:1px 5px;border-radius:4px">localStorage</code>. Data persists across sessions on the same browser and device. To sync across devices, export your data below or ask Claude to build a Supabase-backed version.
+        </div>
+        <div class="btn-row">
+          <button class="btn" onclick="exportData()">Export data (JSON)</button>
+          <button class="btn btn-danger" onclick="clearData()">Clear all data</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+const SK = 'tri_coach_v2';
+const HIST = [
+  {m:'2024-04',r:5,s:11500,b:111.6},{m:'2024-05',r:37.4,s:20250,b:72.1},
+  {m:'2024-06',r:29.2,s:11750,b:82.4},{m:'2024-07',r:49.9,s:13000,b:150.4},
+  {m:'2024-08',r:62.6,s:9100,b:167.8},{m:'2024-09',r:31.6,s:12600,b:154.7},
+  {m:'2024-10',r:70.7,s:11200,b:270.5},{m:'2024-11',r:30.9,s:7100,b:237},
+  {m:'2024-12',r:13.1,s:4150,b:43},{m:'2025-01',r:10.6,s:3250,b:4.6},
+  {m:'2025-02',r:70.5,s:12800,b:212.1},{m:'2025-03',r:51.9,s:1050,b:40.3},
+  {m:'2025-04',r:87.1,s:16081,b:235.4},{m:'2025-05',r:117,s:8250,b:246.4},
+  {m:'2025-06',r:68.5,s:8700,b:86.6},{m:'2025-07',r:85.9,s:8119,b:143.5},
+  {m:'2025-08',r:113.3,s:5300,b:265.5},{m:'2025-09',r:210,s:8950,b:219.5},
+  {m:'2025-10',r:148.6,s:8509,b:314.1},{m:'2025-11',r:87.3,s:7550,b:528.3},
+  {m:'2025-12',r:52.7,s:1050,b:51.9},{m:'2026-01',r:21.5,s:0,b:20.4},
+  {m:'2026-02',r:30.3,s:2300,b:161.2},{m:'2026-03',r:16.6,s:2250,b:221.1},
+  {m:'2026-04',r:99,s:5300,b:195.4}
+];
+const RACE_TYPES = {
+  'sprint':'Sprint tri','olympic':'Olympic tri','70.3':'70.3 Half iron',
+  'full':'Full Ironman','marathon':'Marathon','half-marathon':'Half marathon',
+  'bondi-manly':'Bondi to Manly 30km','ultra-50':'Ultra 50km',
+  'ultra-100':'Ultra 100km','custom-ultra':'Custom ultra','run':'Running race'
+};
+const RACE_BADGE = {
+  'sprint':'b-tri','olympic':'b-tri','70.3':'b-tri','full':'b-full',
+  'marathon':'b-run','half-marathon':'b-run','bondi-manly':'b-ultra',
+  'ultra-50':'b-ultra','ultra-100':'b-ultra','custom-ultra':'b-ultra','run':'b-run'
+};
+
+function loadST() {
+  try { return JSON.parse(localStorage.getItem(SK)) || defST(); } catch(e) { return defST(); }
+}
+function defST() {
+  return {
+    races:[
+      {id:1,name:'TCS Sydney Marathon',date:'2026-08-30',type:'marathon',goal:'finish',targetTime:'',priority:'A',notes:'Year-defining goal. Build from May.'},
+      {id:2,name:'NYC Marathon',date:'2027-11-07',type:'marathon',goal:'time',targetTime:'4:00:00',priority:'A',notes:'Via NYRR 9+1 pathway.'},
+    ],
+    logs:[], plan:null, planRaceId:null
+  };
+}
+function saveST() { try { localStorage.setItem(SK, JSON.stringify(ST)); } catch(e) {} }
+let ST = loadST();
+let volChart = null, currentPlan = null;
+
+function rnd(v,dp=1) { return Math.round(v*Math.pow(10,dp))/Math.pow(10,dp); }
+function daysTo(d) { const a=new Date(d),n=new Date(); n.setHours(0,0,0,0); a.setHours(0,0,0,0); return Math.round((a-n)/864e5); }
+function fmtD(d) { return new Date(d).toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'}); }
+function badge(type) { return `<span class="race-badge ${RACE_BADGE[type]||'b-run'}">${RACE_TYPES[type]||type}</span>`; }
+function pct(a,b) { return b>0?Math.round(a/b*100):100; }
+function statusClass(p) { return p>=90?'sp-green':p>=70?'sp-amber':'sp-red'; }
+function statusText(p) { return p>=90?'on track':p>=70?'slight behind':'behind'; }
+
+function nav(page, btn) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  if(btn) btn.classList.add('active');
+  if(page==='dashboard') renderDashboard();
+  if(page==='races') renderRaces();
+  if(page==='plan') populatePlanRaces();
+  if(page==='progress') renderProgress();
+  if(page==='log') renderLog();
+}
+
+// DASHBOARD
+function renderDashboard() {
+  const last12 = HIST.slice(-12);
+  const tR = last12.reduce((a,m)=>a+m.r,0);
+  const tS = last12.reduce((a,m)=>a+m.s,0);
+  const tB = last12.reduce((a,m)=>a+m.b,0);
+  document.getElementById('dash-run-total').textContent = Math.round(tR)+'km';
+  document.getElementById('dash-swim-total').textContent = rnd(tS/1000)+'km';
+  document.getElementById('dash-ride-total').textContent = Math.round(tB)+'km';
+  const nextRace = ST.races.filter(r=>daysTo(r.date)>0).sort((a,b)=>new Date(a.date)-new Date(b.date))[0];
+  document.getElementById('dash-next-days').textContent = nextRace ? daysTo(nextRace.date)+'d' : '—';
+  document.getElementById('dash-next-name').textContent = nextRace ? nextRace.name : 'Add a race →';
+
+  const labels = last12.map(m=>{ const[y,mo]=m.m.split('-'); return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+mo-1]+"'"+y.slice(2); });
+  if(volChart) volChart.destroy();
+  volChart = new Chart(document.getElementById('volChart'),{
+    type:'bar',
+    data:{ labels, datasets:[
+      {label:'Run (km)',data:last12.map(m=>m.r),backgroundColor:'rgba(74,222,128,0.7)',borderRadius:4,borderSkipped:false},
+      {label:'Swim (×100m)',data:last12.map(m=>Math.round(m.s/100)),backgroundColor:'rgba(56,189,248,0.7)',borderRadius:4,borderSkipped:false},
+      {label:'Ride (km)',data:last12.map(m=>m.b),backgroundColor:'rgba(251,146,60,0.7)',borderRadius:4,borderSkipped:false},
+    ]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${Math.round(c.raw)}`},backgroundColor:'#1e2024',titleColor:'#f0f0ee',bodyColor:'#8a8d94',borderColor:'rgba(255,255,255,0.07)',borderWidth:1}},
+      scales:{
+        x:{ticks:{color:'#4a4d54',font:{size:10,family:'DM Mono'},maxRotation:45,autoSkip:false},grid:{display:false},border:{color:'rgba(255,255,255,0.07)'}},
+        y:{ticks:{color:'#4a4d54',font:{size:10}},grid:{color:'rgba(255,255,255,0.05)'},border:{color:'rgba(255,255,255,0.07)'}}
+      }
+    }
+  });
+
+  const upcoming = ST.races.filter(r=>daysTo(r.date)>-1).sort((a,b)=>new Date(a.date)-new Date(b.date)).slice(0,5);
+  const el = document.getElementById('dash-races');
+  el.innerHTML = upcoming.length ? upcoming.map(r=>`
+    <div class="race-item">
+      <div>
+        <div class="race-name">${r.name}</div>
+        <div class="race-meta">${fmtD(r.date)} · Goal: ${r.goal==='finish'?'Finish':r.targetTime}</div>
+        ${badge(r.type)}
+        ${r.notes?`<div style="font-size:11px;color:var(--text3);margin-top:6px">${r.notes}</div>`:''}
+      </div>
+      <div>
+        <div class="countdown-big">${Math.max(0,daysTo(r.date))}</div>
+        <div class="countdown-label">days to go</div>
+      </div>
+    </div>`).join('') : '<div style="color:var(--text3);font-size:13px">No races yet — add them in the Races tab.</div>';
+}
+
+// RACES
+function toggleTimeRow() {
+  const g = document.getElementById('rg');
+  if(g) document.getElementById('r-time-row').style.display = g.value==='time'?'grid':'none';
+}
+function addRace() {
+  const name = document.getElementById('rn').value.trim();
+  const date = document.getElementById('rd').value;
+  if(!name||!date){alert('Please enter a name and date.');return;}
+  ST.races.push({id:Date.now(),name,date,type:document.getElementById('rt').value,goal:document.getElementById('rg').value,targetTime:(document.getElementById('rtm')||{value:''}).value,priority:(document.getElementById('rp')||{value:'B'}).value,notes:document.getElementById('rnotes').value.trim()});
+  saveST(); renderRaces();
+  document.getElementById('rn').value=''; document.getElementById('rnotes').value='';
+}
+function delRace(id) { if(!confirm('Remove this race?'))return; ST.races=ST.races.filter(r=>r.id!==id); saveST(); renderRaces(); }
+function renderRaces() {
+  const sorted = [...ST.races].sort((a,b)=>new Date(a.date)-new Date(b.date));
+  const el = document.getElementById('race-list');
+  el.innerHTML = sorted.length ? sorted.map(r=>{
+    const d = daysTo(r.date);
+    return `<div class="race-item" style="margin-bottom:10px">
+      <div>
+        <div class="race-name">${r.name}</div>
+        <div class="race-meta">${fmtD(r.date)} · ${d>0?d+' days away':'Past'} · ${r.priority||'B'} race</div>
+        ${badge(r.type)}
+        <span style="font-size:11px;color:var(--text2);margin-left:8px">Goal: ${r.goal==='finish'?'Finish':r.targetTime}</span>
+        ${r.notes?`<div style="font-size:11px;color:var(--text3);margin-top:5px">${r.notes}</div>`:''}
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
+        <div class="countdown-big" style="font-size:24px">${Math.max(0,d)}</div>
+        <div class="countdown-label">days</div>
+        <button class="btn btn-danger btn-sm" onclick="delRace(${r.id})">Remove</button>
+      </div>
+    </div>`;
+  }).join('') : '<div style="color:var(--text3);font-size:13px">No races added yet.</div>';
+}
+
+// PLAN
+function populatePlanRaces() {
+  const sel = document.getElementById('pr');
+  sel.innerHTML = '<option value="">— select a race —</option>';
+  ST.races.filter(r=>daysTo(r.date)>0).sort((a,b)=>new Date(a.date)-new Date(b.date)).forEach(r=>{
+    sel.innerHTML += `<option value="${r.id}">${r.name} — ${fmtD(r.date)}</option>`;
+  });
+  if(ST.planRaceId) sel.value=ST.planRaceId;
+}
+function autoWeeks() {
+  const r = ST.races.find(x=>x.id==document.getElementById('pr').value);
+  if(r) document.getElementById('pw').value = Math.max(4,Math.min(52,Math.floor(daysTo(r.date)/7)));
+}
+function genPlan() {
+  const rid = document.getElementById('pr').value;
+  const weeks = parseInt(document.getElementById('pw').value)||18;
+  const rf = parseInt(document.getElementById('prf').value)||2;
+  const sf = parseInt(document.getElementById('psf').value)||2;
+  const bf = parseInt(document.getElementById('pbf').value)||3;
+  const sessions = parseInt(document.getElementById('pss').value)||6;
+  const knee = document.getElementById('pinj').value.toLowerCase().includes('knee');
+  const race = ST.races.find(r=>r.id==rid);
+  const rType = race?race.type:'marathon';
+  const isUltra = ['ultra-50','ultra-100','bondi-manly','custom-ultra'].includes(rType);
+  const isTri = ['sprint','olympic','70.3','full'].includes(rType);
+
+  const rBases=[0,35,60,100,150], sBases=[0,4000,8000,14000,20000], bBases=[0,80,160,270,380];
+  const rB=rBases[rf], sB=sBases[sf], bB=bBases[bf];
+  const phases = weeks<=8?['build','peak','taper']:weeks<=16?['base','build','peak','taper']:['base','base','build','build','peak','taper'];
+  const pWts = {base:1.5,build:1.5,peak:1,taper:0.5};
+  const tot = phases.reduce((s,p)=>s+pWts[p],0);
+  let rem = weeks;
+  const blocks = [];
+  phases.forEach((p,i)=>{ const cnt=i===phases.length-1?rem:Math.max(1,Math.round(pWts[p]/tot*weeks)); blocks.push({phase:p,count:Math.min(cnt,rem)}); rem-=Math.min(cnt,rem); });
+
+  const plan = []; let wn=0;
+  const raceDate = race?new Date(race.date):null;
+  blocks.forEach(({phase,count})=>{
+    for(let i=0;i<count;i++){
+      wn++;
+      const rec = wn%4===0&&phase!=='taper';
+      const prog = i/Math.max(count-1,1);
+      const facs = {base:0.55+prog*0.2,build:0.75+prog*0.2,peak:0.95+prog*0.05,taper:0.7-prog*0.4};
+      const f = rec?0.62:facs[phase];
+      const isRW = wn===weeks;
+      let sd=null;
+      if(raceDate){const d=new Date(raceDate);d.setDate(d.getDate()-(weeks-wn)*7-6);sd=d;}
+      plan.push({
+        week:wn,phase,rec,isRW,sd,
+        run_km:isRW?rnd(rB*0.2):rnd(rB*f*(isUltra?1.4:1)),
+        swim_m:isRW?Math.round(sB*0.3/50)*50:Math.round(sB*f/50)*50,
+        ride_km:isRW?rnd(bB*0.25):rnd(bB*f*(isTri?1:0.6)),
+        sessions,knee,isTri,isUltra,rType
+      });
+    }
+  });
+  currentPlan=plan; ST.plan=plan; ST.planRaceId=rid; saveST();
+  renderPlanOut(plan,race);
+}
+const PC = {base:{bg:'rgba(56,189,248,0.12)',col:'#38bdf8'},build:{bg:'rgba(251,146,60,0.12)',col:'#fb923c'},peak:{bg:'rgba(167,139,250,0.15)',col:'#a78bfa'},taper:{bg:'rgba(74,222,128,0.12)',col:'#4ade80'}};
+function weekSched(w){
+  if(w.isRW)return[{t:'rest',l:'Rest'},{t:'swim',l:'Easy 800m'},{t:'ride',l:'30min spin'},{t:'rest',l:'Rest'},{t:'run',l:'15min jog'},{t:'rest',l:'Travel/prep'},{t:'race',l:'RACE DAY'}];
+  if(w.phase==='taper')return[{t:'rest',l:'Rest'},{t:'swim',l:`${Math.round(w.swim_m*.4)}m`},{t:'run',l:`${rnd(w.run_km*.3)}km easy`},{t:'ride',l:`${Math.round(w.ride_km*.3)}km spin`},{t:'rest',l:'Rest'},{t:w.isTri?'brick':'run',l:w.isTri?`Short brick`:`${rnd(w.run_km*.25)}km`},{t:'rest',l:'Rest'}];
+  if(w.isUltra)return[{t:'rest',l:'Rest'},{t:'run',l:`${rnd(w.run_km*.2)}km easy`},{t:'ride',l:`${Math.round(w.ride_km*.3)}km`},{t:'run',l:`${rnd(w.run_km*.25)}km hills`},{t:'swim',l:`${Math.round(w.swim_m*.4)}m`},{t:'run',l:`${rnd(w.run_km*.35)}km long`},{t:'rest',l:'Rest'}];
+  if(w.phase==='peak')return[{t:'rest',l:'Rest'},{t:'swim',l:`${Math.round(w.swim_m*.4)}m`},{t:'run',l:`${rnd(w.run_km*.25)}km tempo`},{t:'ride',l:`${Math.round(w.ride_km*.35)}km int.`},{t:'swim',l:`${Math.round(w.swim_m*.3)}m`},{t:'brick',l:`${Math.round(w.ride_km*.4)}km+run`},{t:'run',l:`${rnd(w.run_km*.35)}km long`}];
+  if(w.phase==='build')return[{t:'rest',l:'Rest'},{t:'swim',l:`${Math.round(w.swim_m*.4)}m`},{t:'run',l:`${rnd(w.run_km*.25)}km`},{t:'ride',l:`${Math.round(w.ride_km*.35)}km`},{t:'swim',l:`${Math.round(w.swim_m*.3)}m`},{t:'brick',l:`${Math.round(w.ride_km*.4)}km+run`},{t:'run',l:`${rnd(w.run_km*.3)}km long`}];
+  return[{t:'rest',l:'Rest'},{t:'swim',l:`${Math.round(w.swim_m*.45)}m`},{t:'run',l:`${rnd(w.run_km*.3)}km easy`},{t:'ride',l:`${Math.round(w.ride_km*.4)}km`},{t:'rest',l:'Rest'},{t:'ride',l:`${Math.round(w.ride_km*.45)}km long`},{t:'run',l:`${rnd(w.run_km*.3)}km long`}];
+}
+function renderPlanOut(plan,race){
+  const pc = race?PC[plan[0]?.phase]||PC.base:PC.base;
+  let h = race?`<div class="alert alert-info">Plan generated for <strong>${race.name}</strong> — ${plan.length} weeks to ${fmtD(race.date)}</div>`:'';
+  h+=`<div class="card"><div class="card-title">All ${plan.length} weeks</div><div class="plan-table-wrap"><table class="plan-table">
+  <thead><tr><th>Wk</th><th>Start</th><th>Phase</th><th style="color:#4ade80">Run</th><th style="color:#38bdf8">Swim</th><th style="color:#fb923c">Ride</th><th>Note</th></tr></thead><tbody>`;
+  plan.forEach(w=>{
+    const p=w.isRW?'ph-race':w.rec?'ph-recovery':'ph-'+w.phase;
+    const label=w.isRW?'race week':w.rec?'recovery':w.phase;
+    const dateStr=w.sd?w.sd.toLocaleDateString('en-AU',{day:'numeric',month:'short'}):'—';
+    h+=`<tr><td style="font-weight:600">${w.week}</td><td style="color:var(--text3);font-family:'DM Mono',monospace;font-size:11px">${dateStr}</td><td><span class="phase-tag ${p}">${label}</span></td><td>${w.run_km}km</td><td>${w.swim_m}m</td><td>${w.ride_km}km</td><td style="color:var(--text3);font-size:11px">${w.rec?'Recover':w.isRW?'Race!':w.knee&&w.phase==='build'?'Easy run':''}</td></tr>`;
+  });
+  h+=`</tbody></table></div></div>`;
+  h+=`<div class="card"><div class="card-title">Day-by-day schedule — weeks 1–6</div>
+  <div class="week-sched" style="margin-bottom:8px"><div></div>${['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(d=>`<div class="day-hdr">${d}</div>`).join('')}</div>`;
+  plan.slice(0,6).forEach(w=>{
+    const sched=weekSched(w);
+    const dl=w.sd?w.sd.toLocaleDateString('en-AU',{day:'numeric',month:'short'}):'';
+    h+=`<div class="week-sched"><div class="wk-lbl">Wk ${w.week}<br><span style="font-size:9px;color:var(--text3);font-weight:400">${dl}</span></div>`;
+    sched.forEach(s=>h+=`<div class="day-cell dc-${s.t}">${s.l}</div>`);
+    h+='</div>';
+  });
+  if(plan.length>6) h+=`<div style="font-size:12px;color:var(--text3);margin-top:10px">Weeks 1–6 shown above. Full ${plan.length}-week overview in the table.</div>`;
+  h+=`</div>`;
+  document.getElementById('plan-out').innerHTML=h;
+}
+function exportPDF(){
+  if(!currentPlan){alert('Generate a plan first.');return;}
+  const race=ST.races.find(r=>r.id==ST.planRaceId);
+  const w=window.open('','_blank');
+  const rows=currentPlan.map(p=>`<tr><td>${p.week}</td><td>${p.sd?p.sd.toLocaleDateString('en-AU',{day:'numeric',month:'short'}):'—'}</td><td>${p.isRW?'Race week':p.rec?'Recovery':p.phase}</td><td>${p.run_km}km</td><td>${p.swim_m}m</td><td>${p.ride_km}km</td></tr>`).join('');
+  w.document.write(`<!DOCTYPE html><html><head><title>Training Plan${race?' — '+race.name:''}</title>
+  <style>body{font-family:'Helvetica Neue',Arial,sans-serif;padding:2.5rem;color:#111;font-size:13px}h1{font-size:22px;font-weight:700;margin-bottom:4px}p{color:#666;margin-bottom:2rem}table{width:100%;border-collapse:collapse}th{background:#111;color:#fff;padding:8px 12px;text-align:left;font-size:11px;letter-spacing:.05em;text-transform:uppercase}td{padding:7px 12px;border-bottom:1px solid #eee}tr:nth-child(even) td{background:#f9f9f9}@media print{button{display:none}}</style></head>
+  <body><h1>Training plan${race?' — '+race.name:''}</h1>
+  <p>${race?'Race: '+fmtD(race.date)+' · Goal: '+(race.goal==='finish'?'Finish':race.targetTime):''} · Generated ${new Date().toLocaleDateString('en-AU')}</p>
+  <table><thead><tr><th>Week</th><th>Starts</th><th>Phase</th><th>Run</th><th>Swim</th><th>Ride</th></tr></thead><tbody>${rows}</tbody></table>
+  <br><button onclick="window.print()" style="padding:8px 20px;background:#111;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px">Print / Save as PDF</button></body></html>`);
+  w.document.close();
+}
+
+// PROGRESS
+function renderProgress(){
+  const plan=ST.plan, logs=ST.logs||[];
+  if(!plan||!plan.length){
+    document.getElementById('progress-content').innerHTML=`<div class="alert alert-info">Generate a training plan first, then log your weekly training to track progress here.</div>`;return;
+  }
+  const race=ST.races.find(r=>r.id==ST.planRaceId);
+  const logged=logs.filter(l=>l.run_km!==undefined);
+  const tLR=logged.reduce((a,l)=>a+l.run_km,0);
+  const tLS=logged.reduce((a,l)=>a+l.swim_m,0);
+  const tLB=logged.reduce((a,l)=>a+l.ride_km,0);
+  const n=logged.length;
+  const tPR=plan.slice(0,n).reduce((a,w)=>a+w.run_km,0);
+  const tPS=plan.slice(0,n).reduce((a,w)=>a+w.swim_m,0);
+  const tPB=plan.slice(0,n).reduce((a,w)=>a+w.ride_km,0);
+  const rP=pct(tLR,tPR), sP=pct(tLS,tPS), bP=pct(tLB,tPB);
+  const ov=Math.round((rP+sP+bP)/3);
+
+  let h=`<div class="metrics" style="grid-template-columns:repeat(4,1fr)">
+    <div class="metric-card"><div class="metric-label">Weeks logged</div><div class="metric-value">${n}/${plan.length}</div><div class="metric-sub">${plan.length-n} remaining</div></div>
+    <div class="metric-card run"><div class="metric-label">Run compliance</div><div class="metric-value">${rP}%</div><div class="metric-sub">${rnd(tLR)} / ${rnd(tPR)} km</div></div>
+    <div class="metric-card swim"><div class="metric-label">Swim compliance</div><div class="metric-value">${sP}%</div><div class="metric-sub">${Math.round(tLS)} / ${Math.round(tPS)} m</div></div>
+    <div class="metric-card ride"><div class="metric-label">Ride compliance</div><div class="metric-value">${bP}%</div><div class="metric-sub">${rnd(tLB)} / ${rnd(tPB)} km</div></div>
+  </div>`;
+
+  h+=`<div class="alert ${ov>=90?'alert-ok':ov>=70?'alert-warn':'alert-warn'}"><strong>${ov>=90?'On track':'Behind plan'}</strong> — Overall compliance ${ov}% across ${n} logged weeks.${race?' <strong>'+Math.max(0,daysTo(race.date))+'</strong> days to '+race.name+'.':''}</div>`;
+
+  h+=`<div class="card"><div class="card-title">Discipline compliance</div>`;
+  [{l:'Run',p:rP,c:'#4ade80'},{l:'Swim',p:sP,c:'#38bdf8'},{l:'Ride',p:bP,c:'#fb923c'}].forEach(d=>{
+    h+=`<div class="prog-row"><div style="font-size:12px;color:var(--text2)">${d.l}</div>
+    <div class="prog-track"><div class="prog-bar" style="width:${Math.min(100,d.p)}%;background:${d.c}"></div></div>
+    <div style="font-size:13px;font-weight:600;color:var(--text);text-align:right">${d.p}%</div>
+    <span class="status-pill ${statusClass(d.p)}">${statusText(d.p)}</span></div>`;
+  });
+  h+=`</div>`;
+
+  if(n>0){
+    h+=`<div class="card"><div class="card-title">Week-by-week log vs plan</div><div class="plan-table-wrap"><table class="plan-table">
+    <thead><tr><th>Week</th><th style="color:#4ade80">Run logged</th><th style="color:#4ade80;opacity:.5">Target</th><th style="color:#38bdf8">Swim logged</th><th style="color:#38bdf8;opacity:.5">Target</th><th style="color:#fb923c">Ride logged</th><th style="color:#fb923c;opacity:.5">Target</th><th>Status</th></tr></thead><tbody>`;
+    logged.forEach((l,i)=>{
+      const pw=plan[i]; if(!pw)return;
+      const rp2=pct(l.run_km,pw.run_km), sp2=pct(l.swim_m,pw.swim_m), bp2=pct(l.ride_km,pw.ride_km);
+      const ov2=Math.round((rp2+sp2+bp2)/3);
+      h+=`<tr><td style="color:var(--text3);font-family:'DM Mono',monospace;font-size:11px">${l.week}</td>
+      <td>${rnd(l.run_km)}km</td><td style="color:var(--text3)">${pw.run_km}km</td>
+      <td>${Math.round(l.swim_m)}m</td><td style="color:var(--text3)">${pw.swim_m}m</td>
+      <td>${rnd(l.ride_km)}km</td><td style="color:var(--text3)">${pw.ride_km}km</td>
+      <td><span class="status-pill ${statusClass(ov2)}">${statusText(ov2)}</span></td></tr>`;
+    });
+    h+=`</tbody></table></div></div>`;
+  }
+  document.getElementById('progress-content').innerHTML=h;
+}
+
+// LOG
+function renderLog(){
+  const today=new Date();
+  const mon=new Date(today); mon.setDate(today.getDate()-today.getDay()+1);
+  document.getElementById('lw').value=mon.toISOString().split('T')[0];
+  const logs=ST.logs||[];
+  const el=document.getElementById('log-history');
+  el.innerHTML=logs.length?`<table class="log-table">
+  <thead><tr><th>Week</th><th>Run</th><th>Swim</th><th>Ride</th><th>Feel</th><th>Notes</th></tr></thead>
+  <tbody>${[...logs].reverse().slice(0,12).map(l=>`<tr>
+    <td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text3)">${l.week}</td>
+    <td style="color:#4ade80">${rnd(l.run_km)}km</td>
+    <td style="color:#38bdf8">${Math.round(l.swim_m)}m</td>
+    <td style="color:#fb923c">${rnd(l.ride_km)}km</td>
+    <td style="color:var(--text3);font-size:11px">${l.rpe}</td>
+    <td style="color:var(--text3);font-size:11px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${l.notes||'—'}</td>
+  </tr>`).join('')}</tbody></table>` : `<div style="color:var(--text3);font-size:13px">Nothing logged yet.</div>`;
+}
+
+function logWeek(){
+  const week=document.getElementById('lw').value;
+  if(!week){alert('Please select a week.');return;}
+  const entry={week,rpe:document.getElementById('lrpe').value,run_km:parseFloat(document.getElementById('lr').value)||0,run_sessions:parseInt(document.getElementById('lrs').value)||0,run_long:parseFloat(document.getElementById('lrl').value)||0,swim_m:parseFloat(document.getElementById('ls').value)||0,swim_sessions:parseInt(document.getElementById('lss').value)||0,swim_long:parseFloat(document.getElementById('lsl').value)||0,ride_km:parseFloat(document.getElementById('lb').value)||0,ride_sessions:parseInt(document.getElementById('lbs').value)||0,ride_long:parseFloat(document.getElementById('lbl').value)||0,notes:document.getElementById('lnotes').value,logged:new Date().toISOString()};
+  ST.logs=ST.logs.filter(l=>l.week!==week);
+  ST.logs.push(entry);
+  ST.logs.sort((a,b)=>new Date(a.week)-new Date(b.week));
+  saveST();
+  ['lr','lrs','lrl','ls','lss','lsl','lb','lbs','lbl'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('lnotes').value='';
+  renderLog();
+  alert(`Week of ${week} saved! Go to the Progress tab to see your compliance.`);
+}
+
+function handleCSV(e){
+  const file=e.target.files[0]; if(!file)return;
+  const r=new FileReader();
+  r.onload=function(ev){
+    const lines=ev.target.result.split('\n');
+    const count=Math.max(0,lines.length-2);
+    document.getElementById('csv-fb').innerHTML=`<div class="alert alert-ok">${count} activities loaded from CSV. Your Strava history is ready.</div>`;
+  };
+  r.readAsText(file);
+}
+
+function exportData(){
+  const blob=new Blob([JSON.stringify(ST,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='tricoach-data.json';
+  a.click();
+}
+function clearData(){
+  if(!confirm('Clear all races, logs and plans? This cannot be undone.'))return;
+  ST=defST(); saveST();
+  alert('Data cleared.');
+  nav('dashboard',document.querySelector('.nav-item'));
+}
+
+renderDashboard();
+</script>
+</body>
+</html>
